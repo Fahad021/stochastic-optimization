@@ -8,6 +8,7 @@ small as possible. Run it using python command.
 Author: Andrei Graur 
 """
 
+
 from collections import namedtuple
 import math
 from copy import copy
@@ -48,7 +49,7 @@ if __name__ == "__main__":
 
 	print("Created network in {} tries. From origin {} to destination {}. Number of steps is {} and the average cost is {:.2f}. The deadline to define lateness will be {:.2f}".format(nTries,G.start_node,G.end_node,G.steps,G.get_avg_cost_paths(),G.get_deadline()))
 	#input("Press Enter to continue...")
-	
+
 
 
 	# Initializing the model
@@ -58,20 +59,20 @@ if __name__ == "__main__":
 
 	M = StaticModel(state_names, decision_names, init_state, params, G)
 
-	
+
 	# Initialing the lists that will hold the results
 	x = []
 	avgCostList = []
 	avgPenaltyList = []
 	avgStepsList = []
-	
+
 	# Iterating over theta
 	for theta in theta_list:
-		
+
 		theta = float(theta)
 		M.start_new_theta(theta)
 		x.append(theta)
-		
+
 		cost, penalty, steps = M.runTrials(params['nIterations'],G.get_deadline())
 
 		avgCostList.append(cost)
@@ -79,8 +80,8 @@ if __name__ == "__main__":
 		avgStepsList.append(steps)
 
 		print("Avg total cost with parameter {0} is {1:.3f}. Probability of being late is {2:.2f} and avg number of steps is {3:.2f}\n ".format(theta, cost, penalty,steps))
-	
-	
+
+
 
 	print("ThetaCost ",x)
 	print("AvgCost ",avgCostList)
@@ -89,8 +90,10 @@ if __name__ == "__main__":
 
 	#Ploting the results
 	fig1, axsubs = plt.subplots(1,2)
-	fig1.suptitle('Comparison of theta^cost -  origin {}, destination {}, dist {} - deadline {} and number of iterations {}'.format(M.G.start_node,M.G.end_node,M.G.steps,G.get_deadline(),params['nIterations']) )
-  
+	fig1.suptitle(
+		f"Comparison of theta^cost -  origin {M.G.start_node}, destination {M.G.end_node}, dist {M.G.steps} - deadline {G.get_deadline()} and number of iterations {params['nIterations']}"
+	)
+	  
 
 	axsubs[0].plot(x, avgCostList)
 	axsubs[0].set_title('Average Cost')
@@ -102,11 +105,5 @@ if __name__ == "__main__":
 	axsubs[1].set_xlabel('Percentile')
 	axsubs[1].set_ylabel('%')
 
-	
+
 	plt.show()
-
-
-
-	
-
-	pass

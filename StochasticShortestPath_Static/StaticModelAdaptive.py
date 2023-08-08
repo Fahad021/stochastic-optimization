@@ -66,7 +66,7 @@ class StaticModel():
         return self.Decision(*[info[k] for k in self.x_names])
     
     def print_State(self):
-        print(" CurrentNode: {} and costs on its edges: ".format(self.state.CurrentNode))
+        print(f" CurrentNode: {self.state.CurrentNode} and costs on its edges: ")
         print(printFormatedDict(self.state.CurrentNodeLinksCost))
     
     def update_VFA(self,vhat):
@@ -98,13 +98,15 @@ class StaticModel():
         for target_node in g.nodes:
             # find the max number of steps bewteen to the target_node and the origin_node that achieves that
             max_node,max_dist = g.truebellman(target_node)
-            
+
             if max_dist > maxSteps:   
                 maxSteps = max_dist
                 max_origin_node = max_node
                 max_target_node = target_node
 
-        print("max_origin_node: {} -  max_target_node: {}  - distance: {}".format(max_origin_node,max_target_node,maxSteps))
+        print(
+            f"max_origin_node: {max_origin_node} -  max_target_node: {max_target_node}  - distance: {maxSteps}"
+        )
 
         V_0 = g.bellman(max_target_node)
 
@@ -117,10 +119,7 @@ class StaticModel():
 
 
     def alpha(self):
-        if self.init_args['stepsize_rule']=='Constant':
-            return self.theta_step
-        else:
-            return self.theta_step  
+        return self.theta_step  
 
     
 
@@ -130,7 +129,7 @@ class StaticModel():
 # Stochastic Graph class 
 class StochasticGraph:
     def __init__(self):
-        self.nodes = list()
+        self.nodes = []
         self.edges = defaultdict(list)
         self.lower = {}
         self.distances = {}
@@ -150,20 +149,20 @@ class StochasticGraph:
     def bellman(self, target_node):
         inflist = [np.inf]*len(self.nodes)
         # vt - value list at time t for all the nodes w.r.t. to target_node
-        vt = {k: v for k, v in zip(self.nodes, inflist)}
+        vt = dict(zip(self.nodes, inflist))
         vt[target_node] = 0
-        
+
         # decision function for nodes w.r.t. to target_node
-        dt = {k:v for k,v in zip(self.nodes, self.nodes)}
-        
+        dt = dict(zip(self.nodes, self.nodes))
+
         # updating vt
-        for t in range(1, len(self.nodes)):            
+        for _ in range(1, len(self.nodes)):
             for v in self.nodes:
                 for w in self.edges[v]:
                     # Bellman' equation 
                     if (vt[v] > vt[w] + 0.5*(self.lower[(v,w)] + self.upper[(v,w)])):
                         vt[v] = vt[w] + 0.5*(self.lower[(v,w)] + self.upper[(v,w)])
-                        dt[v] = w 
+                        dt[v] = w
         # print(vt)
         # print(g.distances)
         return(vt)   
@@ -171,20 +170,19 @@ class StochasticGraph:
     def truebellman(self, target_node):
         inflist = [np.inf]*len(self.nodes)
         # vt - list for values at time t for all the nodes w.r.t. to target_node
-        vt = {k: v for k, v in zip(self.nodes, inflist)}
+        vt = dict(zip(self.nodes, inflist))
         vt[target_node] = 0
-        
+
         # decision function for nodes w.r.t. to target_node
-        dt = {k:v for k,v in zip(self.nodes, self.nodes)}
-        
-         # updating vt
-        for t in range(1, len(self.nodes)):            
+        dt = dict(zip(self.nodes, self.nodes))
+
+        for _ in range(1, len(self.nodes)):
             for v in self.nodes:
                 for w in self.edges[v]:
                     # Bellman' equation 
                     if (vt[v] > vt[w] + self.distances[(v, w)]):
                         vt[v] = vt[w] + self.distances[(v, w)]
-                        dt[v] = w 
+                        dt[v] = w
         # print(vt)
         # print(g.distances)
 
@@ -218,7 +216,7 @@ def randomgraphChoice(prng, n, p,LO_UPPER_BOUND,HI_UPPER_BOUND):
         edge_set = list(prng.choice(np.arange(0,n-1), p, replace=False))
         for add_neighbor in list(range(1)):
             neighbor = min(i+add_neighbor+1,n-1)
-            if  not neighbor in edge_set:
+            if neighbor not in edge_set:
                 edge_set = edge_set + [neighbor]
         for j in  edge_set:  
             if (i != j):

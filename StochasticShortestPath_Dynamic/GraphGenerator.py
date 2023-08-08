@@ -50,28 +50,24 @@ class GraphGenerator():
 		nodeCount = 0
 		nodesPerLevel = defaultdict(list)
 		midGraph = math.ceil(nSteps/2)
-		
-		for level in range(nSteps):
-			if level < midGraph:
-				nNodes = level * 2 + 1
-			else:
-				nNodes = (nSteps-level-1) * 2 + 1
 
-			for i in range(nNodes):	
-				nodesPerLevel[level].append(nodeCount) 
+		for level in range(nSteps):
+			nNodes = level * 2 + 1 if level < midGraph else (nSteps-level-1) * 2 + 1
+			for _ in range(nNodes):
+				nodesPerLevel[level].append(nodeCount)
 				nodeCount += 1
 
+		meanWeight = 1
 		for level in range(nSteps-1):
 			for i in nodesPerLevel[level]:
 				G.add_node(i)
 				edge_set = list(self.prng.choice(nodesPerLevel[level+1], min(3,len(nodesPerLevel[level+1])), replace=False))
 				for j in edge_set:
-					meanWeight = 1
 					G.add_edge(i, j, weight = meanWeight)
 
 		self.construct_network_objects(G,filename,0,nodeCount - 1)
 
-		
+
 		return 1
 
 
@@ -86,12 +82,10 @@ class GraphGenerator():
 		totalCostList = []
 		if shouldPrintPaths:
 			print("*************Printing the length and the costs of all paths************")
-		p=0
-		for path in self.mPathsList:
+		for p, path in enumerate(self.mPathsList, start=1):
 			nSteps = len(path)
 			totalCost = 0
-			p += 1
-			pathString = 'Path {}:  '.format(p)
+			pathString = f'Path {p}:  '
 			for n in range(nSteps-1):
 				fromNode = path[n]
 				toNode = path[n+1]
@@ -153,7 +147,7 @@ class GraphGenerator():
 		filename = 'Network_Chance.xlsx'
 		chance = self.init_args['edgeProb']
 		size = self.init_args['nNodes']
-		
+
 
 		G = nx.DiGraph()
 		nbIterations = 0
@@ -168,9 +162,8 @@ class GraphGenerator():
 				for j in range(size):
 					if self.prng.uniform() < chance:
 						if i != j:
-						    meanWeight = 1
-						    G.add_edge(i, j, weight = meanWeight)
-									
+							G.add_edge(i, j, weight=1)
+
 			maxLength = 0
 			mSource = None
 			mDest = None
@@ -178,7 +171,7 @@ class GraphGenerator():
 			mPathsList = []
 
 			breakLoop = False
-			
+
 			for i in range(size): 
 				for j in range(size):
 					if nx.has_path(G, i, j):
@@ -197,12 +190,12 @@ class GraphGenerator():
 							if (length > self.init_args['lengthThreshold']):
 								breakLoop=True
 								break
-					else:
-						pass;
 				if breakLoop:
 					break
 
-			print("Iteration {}, Source {}, Dest {}, Length {}, number of paths {}".format(nbIterations,mSource,mDest,maxLength,mPaths))
+			print(
+				f"Iteration {nbIterations}, Source {mSource}, Dest {mDest}, Length {maxLength}, number of paths {mPaths}"
+			)
 
 			if maxLength > self.init_args['lengthThreshold'] and mPaths > self.init_args['numberPathsThreshold']:
 				# the graph is good and we will use it and stop the loop

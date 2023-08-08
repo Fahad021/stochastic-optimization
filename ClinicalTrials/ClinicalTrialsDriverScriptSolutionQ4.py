@@ -5,6 +5,7 @@ Raluca Cobzaru (c) 2018
 
 """
 
+
 from collections import namedtuple
 import numpy as np
 import scipy
@@ -46,9 +47,9 @@ if __name__ == "__main__":
 					  'true_succ_rate': data.iat[19, 0]}
 	model_name = data.iat[20, 0]
 	numIterations = int(data.iat[21,0])
-	
+
 	decision_names = ['enroll', 'prog_continue', 'drug_success']
-	
+
 	############################################################
 	#Solution Q4
 	avg_policy_value = 0
@@ -70,11 +71,9 @@ if __name__ == "__main__":
 	#End Solution Q4
 	############################################################
 
-	
-	
 
-	
+
+
+
 
 	print("Total elapsed time {:.2f} secs".format(time.time()-time_total))
-	
-	pass

@@ -5,6 +5,7 @@ Raluca Cobzaru (c) 2018
 
 """
 
+
 from collections import namedtuple
 import numpy as np
 import scipy
@@ -46,22 +47,22 @@ if __name__ == "__main__":
 					  'true_succ_rate': data.iat[19, 0]}
 	model_name = data.iat[20, 0]
 	numIterations = int(data.iat[21,0])
-	
+
 	decision_names = ['enroll', 'prog_continue', 'drug_success']
-	
+
 	################################################################
 	#Solution Q5
 	theta_list = list(np.arange(.77,.79,0.005))
 	theta_avg=[]
+	t = 0
+	stop = False
 	for theta in theta_list:
-		initial_state.update({'theta_stop_low':theta})
+		initial_state['theta_stop_low'] = theta
 		avg_policy_value = 0
 		for i in range(0,numIterations):
 
 			M = ClinicalTrialsModel(state_names, decision_names, initial_state, False)
 			P = ClinicalTrialsPolicy(M, policy_names)
-			t = 0
-			stop = False
 			policy_info = {'model_A': [-1, stop],
 							'model_B': [-1, stop],
 							'model_C': [-1, stop],
@@ -80,10 +81,8 @@ if __name__ == "__main__":
 	plt.show()
 	#End Solution Q5
 	###############################################################
-	
 
-	
+
+
 
 	print("Total elapsed time {:.2f} secs".format(time.time()-time_total))
-	
-	pass

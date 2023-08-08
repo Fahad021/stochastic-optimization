@@ -99,7 +99,7 @@ class BDP():
         """
 
         # make list of all possible 2D states using discretized prices and discretized energy values
-        
+
         self.possible_states = []
         if len(self.model.state_variable) == 2:
             for price in self.discrete_prices:
@@ -113,7 +113,9 @@ class BDP():
                         state = self.model.build_state({'energy_amount': energy,'price': p,'prev_price': prev_p})
                         self.possible_states.append(state)
 
-        print("State dimension: {}. State space size: {}. Exogenous info size: {}".format(len(self.model.state_variable),len(self.possible_states),len(self.discrete_price_changes)))
+        print(
+            f"State dimension: {len(self.model.state_variable)}. State space size: {len(self.possible_states)}. Exogenous info size: {len(self.discrete_price_changes)}"
+        )
 
 
         time = self.time
@@ -129,26 +131,21 @@ class BDP():
                     x = self.model.build_decision(d, energy)
                     contribution = price * (self.model.init_args['eta']*x.sell - x.buy)
                     sum_w = 0
-                    w_index = 0
-                    for w in self.discrete_price_changes:
+                    for w_index, w in enumerate(self.discrete_price_changes):
                         f = self.f_p[w_index] if w_index == 0 else self.f_p[w_index] - self.f_p[w_index - 1]
                         next_state = self.state_transition(state, x, w)
                         next_v = values[time + 1][next_state] if time < self.time \
-                            else self.terminal_contribution
+                                else self.terminal_contribution
                         sum_w += f * next_v
-                        w_index += 1
-                    
                     v = contribution + sum_w
                     v_list.append(v)
 
                 max_value = max(v_list)
                 decList=["Buy","Sell","Hold"]
                 #print("Time: {} State: price={:.2f}, energy={:.2f} - Buy: {:.2f} Sell: {:.2f} Hold: {:.2f} - Max_value {:.2f} - maxDec {} ".format(time,price, energy,v_list[0],v_list[1],v_list[2],max_value,decList[v_list.index(max(v_list))]))
-                max_list.update({state: max_value})
+                max_list[state] = max_value
             values[time]=max_list
             time -= 1
-        pass
-        
         self.values_dict=values
         return values
 

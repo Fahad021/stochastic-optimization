@@ -48,7 +48,7 @@ def mc_success_fn(count, mean, samples, N, K):
 		enrollment_samples.append(MC_r_sample)
 		MC_prob_sample = samples[np.random.randint(0, K)]
 		# simulates success count using sample probability
-		for k in range(0, MC_r_sample):
+		for _ in range(0, MC_r_sample):
 			bernoulli_sim = np.random.uniform(0, 1)
 			if bernoulli_sim < MC_prob_sample:
 				success_samples[n] += 1
@@ -157,8 +157,14 @@ class ClinicalTrialsModel():
         :param exog_info: contains all exogenous info
         :return: float - calculated contribution
         """
-		obj_part = (1-decision.prog_continue) * decision.drug_success * self.initial_state['success_rev'] - decision.prog_continue * (self.initial_state['program_cost'] + self.initial_state['patient_cost'] * decision.enroll)
-		return obj_part
+		return (
+			1 - decision.prog_continue
+		) * decision.drug_success * self.initial_state[
+			'success_rev'
+		] - decision.prog_continue * (
+			self.initial_state['program_cost']
+			+ self.initial_state['patient_cost'] * decision.enroll
+		)
 	
 	def step(self, decision):
 		"""
@@ -204,8 +210,8 @@ if __name__ == "__main__":
 					  'true_succ_rate': data.iat[19, 0]}
 	decision_variables = ['enroll', 'prog_continue', 'drug_success']
 	M = ClinicalTrialsModel(state_variables, decision_variables, initial_state, False)
-	
-	while t <= initial_state['trial_size'] and stop == False:
+
+	while t <= initial_state['trial_size'] and not stop:
 		p_belief = M.state.success / (M.state.success + M.state.failure)
 		# drug_success = 1 if successful, 0 if failure, -1 if continue trial
 		if p_belief > initial_state['theta_stop_high']:
@@ -216,13 +222,25 @@ if __name__ == "__main__":
 			stop = True
 		else:
 			decision = {'prog_continue': 1, 'drug_success': -1}
-		decision['enroll'] = np.random.choice(range(initial_state['enroll_min'], initial_state['enroll_max']+initial_state['enroll_step'], initial_state['enroll_step'])) if stop == False else 0
+		decision['enroll'] = (
+			np.random.choice(
+				range(
+					initial_state['enroll_min'],
+					initial_state['enroll_max'] + initial_state['enroll_step'],
+					initial_state['enroll_step'],
+				)
+			)
+			if not stop
+			else 0
+		)
 		x = M.build_decision(decision)
-		print("t={}, obj={}, state.potential_pop={}, state.success={}, state.failure={}, x={}".format(t, M.objective, M.state.potential_pop, M.state.success, M.state.failure, x))
+		print(
+			f"t={t}, obj={M.objective}, state.potential_pop={M.state.potential_pop}, state.success={M.state.success}, state.failure={M.state.failure}, x={x}"
+		)
 		M.step(x)
 		t += 1
-		
-	print("\nStopping state: ")			
-	print("t={}, obj={}, state.potential_pop={}, state.success={}, state.failure={}, x={}".format(t, M.objective, M.state.potential_pop, M.state.success, M.state.failure, x))
-	
-	pass
+
+	print("\nStopping state: ")
+	print(
+		f"t={t}, obj={M.objective}, state.potential_pop={M.state.potential_pop}, state.success={M.state.success}, state.failure={M.state.failure}, x={x}"
+	)

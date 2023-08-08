@@ -83,15 +83,11 @@ class StaticModel():
 	def sample_from_uniform(self,fromNode,toNode):
 		spread = self.G.spreads[fromNode][toNode]
 		deviation = self.prng.uniform(- spread, spread) * self.G.meanCosts[fromNode][toNode]
-		m_hat = self.G.meanCosts[fromNode][toNode] + deviation	
-		return m_hat
+		return self.G.meanCosts[fromNode][toNode] + deviation
 
 
 	def get_step_size(self):
-		#alpha = 1/self.n
-		#alpha = 1./self.time
-		alpha = 1./self.obs
-		return 	alpha	
+		return 1./self.obs	
 
 	def build_state(self, info):
 		return self.State(*[info[k] for k in self.state_names])
@@ -102,8 +98,7 @@ class StaticModel():
 	# exog_info_fn: function - returns the real experienced cost of traversing a link 
 	# from 'fromNode' to 'toNode' 
 	def exog_info_fn(self, fromNode, toNode):
-		cost_hat = self.sample_from_uniform(fromNode,toNode)
-		return cost_hat
+		return self.sample_from_uniform(fromNode,toNode)
 
 	# transition_fn: function - updates the state within the model and returns new state
 	def transition_fn(self, decision):
@@ -114,8 +109,7 @@ class StaticModel():
 	# :param objective_fn: function - returns the cost we would experience by taking 'decision'
 	# as our next node from the current state 'state'
 	def objective_fn(self, decision):
-		cost = self.exog_info_fn(self.state.node, decision)
-		return cost 
+		return self.exog_info_fn(self.state.node, decision) 
 
 
 	'''
@@ -130,16 +124,15 @@ class StaticModel():
 		totalPenalty = 0.0
 		totalCost = 0.0
 		totalTime = 0.0
-		
 
-		for i in range(nbTrials):
-			
+
+		for _ in range(nbTrials):
 			self.state = self.build_state(self.init_state)
 			self.time = 1
 			self.n += 1
 			cost=0.0
 			#print("Theta {:.2f} Iteration {}".format(self.theta,self.n))
-			
+
 
 			#Following a path  - the policy function is a lookahead 
 			while self.state.node != self.G.end_node:
@@ -152,7 +145,7 @@ class StaticModel():
 				#print("\t Theta {:.2f}, Iteration {}, Time {}, CurrNode {}, Decision {}, Step Cost {:.2f} Cum Cost {:.2f}".format(self.theta,self.n,self.time,self.state.node,decision,stepCost,cost))
 				self.transition_fn(decision)
 
-			
+
 			#end of path calculations
 			totalCost += cost
 			if cost > deadline:
