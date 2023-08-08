@@ -84,34 +84,34 @@ class AssetSellingModel():
         # we assume that the change in price is normally distributed with mean bias and variance 2
 
         exog_params = self.initial_args['exog_params']
-        
+
 
         biasdf = exog_params['biasdf'].T
         biasprob = biasdf[self.state.bias]
-        
-        
+
+
         coin = self.prng.random_sample()
         if (coin < biasprob['Up']):
             new_bias = 'Up'
             bias = exog_params['UpStep']
-        elif (coin>=biasprob['Up'] and coin<biasprob['Neutral']):
+        elif coin < biasprob['Neutral']:
             new_bias = 'Neutral'
             bias = 0
         else:
             new_bias = 'Down'
             bias = exog_params['DownStep']
-         
+
         print("coin ",coin," curr_bias ",self.state.bias," new_bias ",new_bias)
 
-    
-       
+
+
 
 
 
         updated_price = self.state.price + self.prng.normal(bias, exog_params['Variance'])
         # we account for the fact that asset prices cannot be negative by setting the new price as 0 whenever the
         # random process gives us a negative price
-        new_price = 0.0 if updated_price < 0.0 else updated_price
+        new_price = max(updated_price, 0.0)
         return {"price": new_price,"bias":new_bias}
 
     def transition_fn(self, decision, exog_info):
@@ -136,8 +136,7 @@ class AssetSellingModel():
         :return: float - calculated contribution
         """
         sell_size = 1 if decision.sell is 1 and self.state.resource != 0 else 0
-        obj_part =  self.state.price * sell_size
-        return obj_part
+        return self.state.price * sell_size
 
     def step(self, decision):
         """

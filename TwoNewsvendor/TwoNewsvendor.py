@@ -101,10 +101,7 @@ class Model_Field():
         return self.decision
 
     def exog_info_fn(self, decision_central, demand):
-        exog_info = []
-        exog_info.append(decision_central) 
-        exog_info.append(demand) 
-        return exog_info
+        return [decision_central, demand]
 
     def get_alpha_bias(self):
         return self.init_args['alpha_bias']

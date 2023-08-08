@@ -84,9 +84,7 @@ class EnergyStorageModel():
 
     def exog_info_fn(self,time):
         
-        next_price = self.exog_params['hist_price'][time]
-        
-        return next_price
+        return self.exog_params['hist_price'][time]
 
     def transition_fn(self, time, decision):
         """
@@ -117,8 +115,7 @@ class EnergyStorageModel():
         :param decision: namedtuple - contains all decision info
         :return: float - calculated contribution
         """
-        obj_part = self.state.price * (self.init_args['eta']*decision.sell - decision.buy)
-        return obj_part
+        return self.state.price * (self.init_args['eta']*decision.sell - decision.buy)
 
     def step(self, time, decision):
         """

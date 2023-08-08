@@ -21,7 +21,9 @@ def process_raw_price_data(file,params):
     DISC_TYPE = "FROM_CUM"
     #DISC_TYPE = "OTHER"
 
-    print("Processing raw price data. Constructing price change list and cdf using {}".format(DISC_TYPE))
+    print(
+        f"Processing raw price data. Constructing price change list and cdf using {DISC_TYPE}"
+    )
     tS = time.time()
 
     # load energy price data from the Excel spreadsheet
@@ -45,7 +47,7 @@ def process_raw_price_data(file,params):
     max_price = pd.DataFrame.max(sort_by_price['PJM_RT_LMP'])
     min_price = pd.DataFrame.min(sort_by_price['PJM_RT_LMP'])
     print("Min price {:.2f} and Max price {:.2f}".format(min_price,max_price))
-    
+
 
 
 
@@ -56,15 +58,15 @@ def process_raw_price_data(file,params):
     data_selection['Price_Shift'] = data_selection.PJM_RT_LMP.shift(1)
     data_selection['Price_Change'] = data_selection['PJM_RT_LMP'] - data_selection['Price_Shift']
     sort_price_change = data_selection.sort_values('Price_Change')
-    
+
 
     # discretize change in price and obtain f(p) for each price change
     max_price_change = pd.DataFrame.max(sort_price_change['Price_Change'])
     min_price_change = pd.DataFrame.min(sort_price_change['Price_Change'])
     print("Min price change {:.2f} and Max price change {:.2f}".format(min_price_change,max_price_change))
-    
-    
-    
+
+
+
 
     # there are 191 values for price change
     price_changes_sorted = sort_price_change['Price_Change'].tolist()
@@ -110,11 +112,12 @@ def process_raw_price_data(file,params):
 
 
     print("Finishing processing raw price data in {:.2f} secs. Expected price change is {:.2f}. Hist_price len is {}".format(time.time()-tS,mean_price_change,len(hist_price)))
-    #input("enter any key to continue...") 
-
-    exog_params = {'hist_price':hist_price,"price_changes_sorted":price_changes_sorted,"discrete_price_change_list":discrete_price_change_list,"discrete_price_change_cdf":discrete_price_change_cdf}
-
-    return exog_params
+    return {
+        'hist_price': hist_price,
+        "price_changes_sorted": price_changes_sorted,
+        "discrete_price_change_list": discrete_price_change_list,
+        "discrete_price_change_cdf": discrete_price_change_cdf,
+    }
 
 
 if __name__ == "__main__":
@@ -127,26 +130,26 @@ if __name__ == "__main__":
     #Reading the algorithm pars
     parDf = pd.read_excel(file, sheet_name = 'ParamsModel')
     parDict=parDf.set_index('Index').T.to_dict('list')
-    params = {key:v for key, value in parDict.items() for v in value} 
+    params = {key:v for key, value in parDict.items() for v in value}
     params['seed'] = seed
     params['T'] = min(params['T'],192)
-    
+
 
     parDf = pd.read_excel(file, sheet_name = 'GridSearch')
     parDict=parDf.set_index('Index').T.to_dict('list')
     paramsPolicy = {key:v for key, value in parDict.items() for v in value}
-    params.update(paramsPolicy)
+    params |= paramsPolicy
 
     parDf = pd.read_excel(file, sheet_name = 'BackwardDP')
     parDict=parDf.set_index('Index').T.to_dict('list')
     paramsPolicy = {key:v for key, value in parDict.items() for v in value}
-    params.update(paramsPolicy)
+    params |= paramsPolicy
 
     if isinstance(params['priceDiscSet'], str):
         price_disc_list = params['priceDiscSet'].split(",")
         price_disc_list = [float(e) for e in price_disc_list]
     else:
-        price_disc_list = [float(params['priceDiscSet'])] 
+        price_disc_list = [float(params['priceDiscSet'])]
     params['price_disc_list']=price_disc_list
 
     print("Parameters ",params)
@@ -155,7 +158,7 @@ if __name__ == "__main__":
 
     #exog_params  is a dictionary with  three lists: hist_price, price_changes_list, discrete_price_change_cdf
     exog_params = process_raw_price_data(file,params)
-          
+
     # create a model and a policy
     policy_names = ['buy_low_sell_high_policy','bellman_policy']
     state_variable = ['price', 'energy_amount']
@@ -174,7 +177,7 @@ if __name__ == "__main__":
         grid_search_theta_values = P.grid_search_theta_values(params)
         print(grid_search_theta_values)
         #input("enter any key to continue...")
-        
+
         # use those theta values to calculate corresponding contribution values
         contribution_values_dict = P.perform_grid_search(params, grid_search_theta_values[0])
 
@@ -193,14 +196,14 @@ if __name__ == "__main__":
         # make list of prices with different increments
         min_price = np.min(exog_params['hist_price'])
         max_price = np.max(exog_params['hist_price'])
-        
-        
+
+
         for inc in params['price_disc_list']:
             discrete_prices = np.arange(min_price,max_price+inc,inc)
 
             print("\nStarting BackwardDP 2D")
             test_2D = BDP(discrete_prices, discrete_energy, exog_params['price_changes_sorted'], exog_params['discrete_price_change_list'], exog_params['discrete_price_change_cdf'], params['T'], copy(M))
-        
+
             # 2D states - time the process with a 2D state variable
             t0 = time.time()
             value_dict = test_2D.bellman()
@@ -208,25 +211,25 @@ if __name__ == "__main__":
             time_elapsed = t1-t0
             print("Time_elapsed_2D_model={:.2f} secs.".format(time_elapsed))
 
-            
+
             print("Starting policy evaluation for the actual sample path")
             tS=time.time()
             contribution = P.run_policy(test_2D, "bellman_policy", params['T'])
             print("Contribution using BackwardDP 2D is {:.2f}. Finished in {:.2f}s".format(contribution,time.time()-tS))
 
 
-            
+
             if params['run3D']:
                 print("\nStarting BackwardDP 3D")
 
                 state_variable_3 = ['price', 'energy_amount','prev_price']
-                
+
                 index = bisect(discrete_prices, exog_params['hist_price'][1])
                 adjusted_p1 = discrete_prices[index]
                 index = bisect(discrete_prices, exog_params['hist_price'][0])
                 adjusted_p0 = discrete_prices[index]
                 initial_state_3 = {'price': adjusted_p1,'energy_amount':params['R0'], 'prev_price':adjusted_p0}
-                
+
                 M3 = ESM(state_variable_3, decision_variable, initial_state_3, params, exog_params,possible_decisions)
                 P3 = EnergyStoragePolicy(M3, policy_names)
 
@@ -239,8 +242,8 @@ if __name__ == "__main__":
                 time_elapsed = t1-t0
                 print("Time_elapsed_3D_model={:.2f} secs.".format(time_elapsed))
 
-                
-                
+
+
                 print("Starting policy evaluation for the actual sample path")
                 tS=time.time()
                 contribution = P3.run_policy(test_3D, "bellman_policy", params['T'])

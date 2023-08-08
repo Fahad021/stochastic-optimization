@@ -67,7 +67,9 @@ class MedicalDecisionDiabetesModel():
     
 
     def printTruth(self):
-        print("Model truth_type {}. Meaurement noise sigma_W {} ".format(self.truth_type,self.sigma_w))
+        print(
+            f"Model truth_type {self.truth_type}. Meaurement noise sigma_W {self.sigma_w} "
+        )
         for x in self.x_names:
             print("Treatment {}: par1 {:.2f}, par2 {:.2f} and par3 {}".format(x,self.truth_params_dict[x][0],self.truth_params_dict[x][1],self.truth_params_dict[x][2]))
         print("\n\n")
@@ -119,9 +121,8 @@ class MedicalDecisionDiabetesModel():
     
     # this function calculates W (reduction in A1C level)
     def objective_fn(self, decision, exog_info):
-        mu = exog_info["mu"]
         W = exog_info["reduction"]
-        return mu
+        return exog_info["mu"]
         
     # this method steps the process forward by one time increment by updating the sum of the contributions, the
     # exogenous information and the state variable

@@ -47,8 +47,11 @@ class AssetSellingPolicy():
         :return: a decision made based on the policy
         """
         lower_limit = info_tuple[0]
-        new_decision = {'sell': 1, 'hold': 0} if state.price < lower_limit else {'sell': 0, 'hold': 1}
-        return new_decision
+        return (
+            {'sell': 1, 'hold': 0}
+            if state.price < lower_limit
+            else {'sell': 0, 'hold': 1}
+        )
 
     def high_low_policy(self, state, info_tuple):
         """
@@ -60,9 +63,11 @@ class AssetSellingPolicy():
         """
         lower_limit = info_tuple[0]
         upper_limit = info_tuple[1]
-        new_decision = {'sell': 1, 'hold': 0} if state.price < lower_limit or state.price > upper_limit \
+        return (
+            {'sell': 1, 'hold': 0}
+            if state.price < lower_limit or state.price > upper_limit
             else {'sell': 0, 'hold': 1}
-        return new_decision
+        )
 
     def track_policy(self, state, info_tuple):
         """
@@ -79,7 +84,7 @@ class AssetSellingPolicy():
 
         prev_price = info_tuple[2]
         prev_price2 = info_tuple[3]
-        
+
         smoothed_price_p = .7*state.price + .2*prev_price + .1*prev_price2
         smoothed_price = smoothed_price_p #discount factor 
 
@@ -87,13 +92,15 @@ class AssetSellingPolicy():
         state_price_d = state.price * info_tuple[1]
 
 
-        print('Theta {}, discount factor {},  Current price {}, smoothed_price {}, d_smoothed_prince {}, and hold interval ({}, {})'.format(theta,info_tuple[1],state_price_d,smoothed_price_p,smoothed_price,max(0,smoothed_price - theta),smoothed_price +theta))
-        
-        new_decision = {'sell': 1, 'hold': 0} \
-            if state_price_d >= smoothed_price + theta\
-                or state_price_d <= max(0,smoothed_price - theta) \
+        print(
+            f'Theta {theta}, discount factor {info_tuple[1]},  Current price {state_price_d}, smoothed_price {smoothed_price}, d_smoothed_prince {smoothed_price}, and hold interval ({max(0, smoothed_price - theta)}, {smoothed_price + theta})'
+        )
+        return (
+            {'sell': 1, 'hold': 0}
+            if state_price_d >= smoothed_price + theta
+            or state_price_d <= max(0, smoothed_price - theta)
             else {'sell': 0, 'hold': 1}
-        return new_decision
+        )
         #####
     def run_policy(self, param_list, policy_info, policy, time):
         """
@@ -110,8 +117,8 @@ class AssetSellingPolicy():
 
         while model_copy.state.resource != 0 and time < model_copy.initial_args['T']:
             # build decision policy
-            
-           
+
+
             p = self.build_policy(policy_info)
 
             # make decision based on chosen policy
@@ -126,32 +133,32 @@ class AssetSellingPolicy():
                  decision = {'sell': 1, 'hold': 0}  
 
             x = model_copy.build_decision(decision)
-            print("time={}, obj={}, s.resource={}, s.price={}, x={}".format(time, model_copy.objective,
-                                                                            model_copy.state.resource,
-                                                                            model_copy.state.price, x))
+            print(
+                f"time={time}, obj={model_copy.objective}, s.resource={model_copy.state.resource}, s.price={model_copy.state.price}, x={x}"
+            )
             #####
             prev_price2 = model_copy.state.prev_price
             #####
-            
+
             # update previous price
             prev_price = model_copy.state.price
-            
+
             # step the model forward one iteration
             model_copy.step(x)
             # update track policy info with new previous price
-            
+
             #####
             policy_info.update({'track': (theta,model_copy.initial_args['gamma'] ** time) + (prev_price, prev_price2)})
             #policy_info.update({'track': param_list[2] + (prev_price, prev_price2)})
             #####
-            
+
             # increment time
             time += 1
 
-        contribution = model_copy.objective*model_copy.initial_args['gamma'] ** (time-1)  
-        #contribution = model_copy.objective 
-        print("obj={}, state.resource={}".format(contribution, model_copy.state.resource))
-        
+        contribution = model_copy.objective*model_copy.initial_args['gamma'] ** (time-1)
+        #contribution = model_copy.objective
+        print(f"obj={contribution}, state.resource={model_copy.state.resource}")
+
         return contribution,time
 
 
@@ -193,16 +200,16 @@ class AssetSellingPolicy():
         :return: list - list of contribution values corresponding to each theta
         """
         contribution_values = []
-       
+
 
         for theta in theta_values:
             t = time
             policy_dict = policy_info.copy()
             policy_dict.update({'high_low': theta})
-            print("policy_dict={}".format(policy_dict))
+            print(f"policy_dict={policy_dict}")
             contribution = self.run_policy(param_list, policy_dict, policy, t)
             contribution_values.append(contribution)
-            
+
         return (contribution_values)
 
     def plot_heat_map(self, contribution_values, theta_low_values, theta_high_values):
@@ -252,28 +259,28 @@ class AssetSellingPolicy():
 
         for ite,n in zip(iterations,list(range(len(iterations)))):
             contributions = np.array(contribution_values[ite])
-            
-            
+
+
             increment_count = len(theta_high_values)
             contributions = np.reshape(contributions, (-1, increment_count))
             contributions=contributions[::-1]
-            
 
 
-            print("Ite {}, n {} and plot ({},{})".format(ite,n,n // 2,n % 2))
+
+            print(f"Ite {ite}, n {n} and plot ({n // 2},{n % 2})")
             if (math.ceil(len(iterations)/2)>1):
                 ax = axsubs[n // 2,n % 2]
             else:
                 ax = axsubs[n % 2]
-            
+
             im = ax.imshow(contributions, cmap='hot')
             cbar = ax.figure.colorbar(im, ax=ax)
             ax.set_yticks(np.arange(len(theta_low_values)))
             ax.set_xticks(np.arange(len(theta_high_values)))
             ax.set_yticklabels(list(reversed(theta_low_values)))
             ax.set_xticklabels(theta_high_values)
-            
-            
+
+
             # get the current labels 
             labelsx = [item.get_text() for item in ax.get_xticklabels()]
             ax.set_xticklabels([str(round(float(label), 2)) for label in labelsx])
@@ -284,8 +291,8 @@ class AssetSellingPolicy():
 
 
             plt.setp(ax.get_xticklabels(), rotation=45, ha="right",rotation_mode="anchor")
-            
-            ax.set_title("Iteration {}".format(ite))
+
+            ax.set_title(f"Iteration {ite}")
 
         # Create a big subplot
         ax = fig.add_subplot(111, frameon=False)
@@ -295,9 +302,9 @@ class AssetSellingPolicy():
         ax.set_ylabel('Theta sell low values', labelpad=0) # Use argument `labelpad` to move label downwards.
         ax.set_xlabel('Theta sell high values', labelpad=10)
 
-        
 
-            
+
+
         fig.tight_layout()
         plt.show()
         return True

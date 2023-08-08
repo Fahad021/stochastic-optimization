@@ -40,35 +40,32 @@ class EnergyStoragePolicy():
         lower_limit = theta[0]
         upper_limit = theta[1]
         if state.price <= lower_limit:
-            new_decision = self.model.possible_decisions[0]
+            return self.model.possible_decisions[0]
         elif state.price >= upper_limit:
-            new_decision = self.model.possible_decisions[1]
+            return self.model.possible_decisions[1]
         else:
-            new_decision = self.model.possible_decisions[2]
-        return new_decision
+            return self.model.possible_decisions[2]
 
 
     def bellman_policy(self, time,state, bellman_model):
         
         price = state.price
         energy = state.energy_amount
-        
+
         maxValue = -np.inf
         maxDec = None
         for d in self.model.possible_decisions:
             x = self.model.build_decision(d, energy)
             contribution = price * (x.sell - x.buy)
-           
+
             sum_w = 0
-            w_index = 0
-            for w in bellman_model.discrete_price_changes:
+            for w_index, w in enumerate(bellman_model.discrete_price_changes):
                 f = bellman_model.f_p[w_index] if w_index == 0 else bellman_model.f_p[w_index] - bellman_model.f_p[w_index - 1]
                 next_state = bellman_model.state_transition(state, x, w)
                 next_v = bellman_model.values_dict[time+1][next_state] if time < bellman_model.time \
-                    else bellman_model.terminal_contribution
+                        else bellman_model.terminal_contribution
                 sum_w += f * next_v
-        
-                w_index += 1
+
             # print("w_index={}".format(w_index))
             v = contribution + sum_w
             if (v>maxValue):
@@ -92,7 +89,7 @@ class EnergyStoragePolicy():
         sell_list = []
 
         while time != model_copy.init_args['T']:
-            
+
 
             decision = getattr(self,policy)(time,model_copy.state, policy_info)
 
@@ -101,7 +98,7 @@ class EnergyStoragePolicy():
                 decision = {'buy': 0, 'hold': 0, 'sell': 1}   
 
             x = model_copy.build_decision(decision,model_copy.state.energy_amount)
-            
+
             nTrades['buy'] += x.buy
             nTrades['sell'] += x.sell
             nTrades['hold'] += model_copy.state.energy_amount
@@ -109,23 +106,23 @@ class EnergyStoragePolicy():
                 buy_list.append((time,model_copy.state.price))
             elif x.sell>0:
                 sell_list.append((time,model_copy.state.price))
-           
+
             #print("time={}, obj={}, state.energy_amount={}, state.price={}, x={}".format(time, model_copy.objective,model_copy.state.energy_amount, model_copy.state.price, x))
-            
+
             # step the model forward one iteration
             model_copy.step(time, x)
             # increment time
             time += 1
         contribution = model_copy.objective
-        
+
         print("Energy traded - Sell: {:.2f} - Buy: {:.2f} - Hold % : {:.2f}".format(nTrades['sell'],nTrades['buy'],nTrades['hold']/model_copy.init_args['T']))
         print("Sell times and prices ")
-        for i in range(len(sell_list)):
-            print("t = {:.2f} and price = {:.2f}".format(sell_list[i][0],sell_list[i][1]))
+        for sell in sell_list:
+            print("t = {:.2f} and price = {:.2f}".format(sell[0], sell[1]))
         print("Buy times and prices ")
-        for i in range(len(buy_list)):
-            print("t = {:.2f} and price = {:.2f}".format(buy_list[i][0],buy_list[i][1]))
-        
+        for buy in buy_list:
+            print("t = {:.2f} and price = {:.2f}".format(buy[0], buy[1]))
+
         return contribution
 
     def perform_grid_search(self, params, theta_values):

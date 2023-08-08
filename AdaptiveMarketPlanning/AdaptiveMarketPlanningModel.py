@@ -87,8 +87,10 @@ class AdaptiveMarketPlanningModel():
 	# this function calculates how much money we make
 	def objective_fn(self, decision, exog_info):
 		self.order_quantity=self.state.order_quantity
-		obj_part = self.price * min(self.order_quantity, exog_info['demand']) - self.cost * self.state.order_quantity
-		return obj_part
+		return (
+			self.price * min(self.order_quantity, exog_info['demand'])
+			- self.cost * self.state.order_quantity
+		)
 
 	# this method steps the process forward by one time increment by updating the sum of the contributions, the
 	# exogenous information and the state variable
@@ -97,16 +99,17 @@ class AdaptiveMarketPlanningModel():
 		exog_info = self.exog_info_fn(decision)
 		onestep_contribution = self.objective_fn(decision, exog_info)
 
-		print("t {}, Price {}, Demand {}, order_quantity {}, contribution {}".format(self.t,self.price,exog_info['demand'],self.order_quantity,onestep_contribution))
-		
+		print(
+			f"t {self.t}, Price {self.price}, Demand {exog_info['demand']}, order_quantity {self.order_quantity}, contribution {onestep_contribution}"
+		)
+
 		#Check if cumulative or terminal reward
 		if (self.reward_type == 'Cumulative'):
 			self.obj += onestep_contribution
-		else:
-			if (self.t == self.T):
-				self.obj = onestep_contribution
+		elif (self.t == self.T):
+			self.obj = onestep_contribution
 
-		
+
 		transition_info = self.transition_fn(decision, exog_info)
 		self.state = self.build_state(transition_info)
 		

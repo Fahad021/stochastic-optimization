@@ -112,27 +112,12 @@ def generate_exog_info_by_bloodtype_p(t, Bld_Net, params):
         factor = params['SURGE_FACTOR']
     else:
         factor = 1
-    
+
     demand = [int(np.random.poisson(factor*params['MAX_DEM_BY_BLOOD'][dmd[0]]*params['SURGERYTYPES_PROP'][dmd[1]]*params['SUBSTITUTION_PROP'][dmd[2]])) for dmd in Bld_Net.demandnodes]   
 
-    if False:
-        demand=[]
-        for dmd in Bld_Net.demandnodes: 
-            if dmd[0]=="O-":
-                if dmd[1]=="Urgent":
-                    demand.append(1)
-                else:
-                    eleDem=max(0,int(np.random.poisson(factor*params['MAX_DEM_BY_BLOOD'][dmd[0]]-1))-1)
-                    demand.append(eleDem)
-
-            else:
-                demand.append(int(np.random.poisson(factor*params['MAX_DEM_BY_BLOOD'][dmd[0]]*params['SURGERYTYPES_PROP'][dmd[1]]*params['SUBSTITUTION_PROP'][dmd[2]])))  
-
-
-    
     #donation
     donation = [int(np.random.poisson(params['MAX_DON_BY_BLOOD'][i])) for i in params['Bloodtypes']]    
-    
+
     return Exog_Info(demand, donation)
 
 

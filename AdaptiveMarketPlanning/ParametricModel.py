@@ -78,5 +78,7 @@ class ParametricModel(AdaptiveMarketPlanningModel):
 	def objective_fn(self, decision, exog_info):
 		self.price = self.state.price
 		self.order_quantity=self.order_quantity_fn(self.state.price, self.state.theta)
-		obj_part = self.state.price * min(self.order_quantity, exog_info['demand']) - self.cost * self.order_quantity
-		return obj_part
+		return (
+			self.state.price * min(self.order_quantity, exog_info['demand'])
+			- self.cost * self.order_quantity
+		)

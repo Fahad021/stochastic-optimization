@@ -41,10 +41,10 @@ class AdaptiveMarketPlanningPolicy():
 	def run_policy(self):
 		model_copy = copy(self.M)
 
-		for t in range(model_copy.T):	 
+		for _ in range(model_copy.T):
 			model_copy.step(AdaptiveMarketPlanningPolicy(model_copy, self.theta_step).kesten_rule())
-			
-		
+
+
 
 		return (model_copy.obj,model_copy.learning_list.copy())
 

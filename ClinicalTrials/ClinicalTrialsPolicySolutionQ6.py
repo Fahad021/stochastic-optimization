@@ -72,12 +72,9 @@ class ClinicalTrialsPolicy():
 		if stop_A==False:
 			value_dict={}
 			sol_dict,value_dict = model_A_value_fn(sim_model, 0, success_A,value_dict)
-			new_decision = sol_dict['optimal_enroll']  
+			return sol_dict['optimal_enroll']
 		else: 
-			new_decision=0
-		
-
-		return new_decision
+			return 0
 		
 	def model_B_policy(self, state, info_tuple):
 		"""
@@ -91,15 +88,13 @@ class ClinicalTrialsPolicy():
 		stop_B = info_tuple[1]
 		sim_model = ClinicalTrialsModel(self.model.state_variables, self.model.decision_variables, self.model.initial_state, True)
 		sim_model.state = copy.deepcopy(state)
-		
+
 		if stop_B==False:
 			value_dict={}
 			sol_dict,value_dict = model_B_value_fn(sim_model, 0, success_B,value_dict)
-			new_decision = sol_dict['optimal_enroll']  
+			return sol_dict['optimal_enroll']
 		else: 
-			new_decision=0
-		
-		return new_decision
+			return 0
 		
 	def model_C_extension_policy(self, state, info_tuple):
 		"""
@@ -117,11 +112,9 @@ class ClinicalTrialsPolicy():
 		if stop_C_extension==False:
 			value_dict={}
 			sol_dict,value_dict = model_C_extension_value_fn(sim_model, 0, success_C_extension,value_dict)
-			new_decision = sol_dict['optimal_enroll']  
+			return sol_dict['optimal_enroll']
 		else: 
-			new_decision=0
-
-		return new_decision
+			return 0
 		
 	def model_C_policy(self, state, info_tuple, time):
 		"""
@@ -137,22 +130,38 @@ class ClinicalTrialsPolicy():
 		sim_model = ClinicalTrialsModel(self.model.state_variables, self.model.decision_variables, self.model.initial_state, True)
 		sim_model.state = copy.deepcopy(state)
 		parameters = parameters_fn(sim_model)
-		if stop_C == True: new_decision = 0
-		else:
-			vals = []
-			decs = []
-			for x_enroll in range(self.model.initial_state['enroll_min'], self.model.initial_state['enroll_max']+self.model.initial_state['enroll_step'], self.model.initial_state['enroll_step']):
-				pseudo_state = [state.potential_pop + x_enroll, state.success, state.failure, state.l_response]
-				if len(parameters[time]) < 8:
-					value = func_simple(pseudo_state, parameters[time][0], parameters[time][1], parameters[time][2], parameters[time][3])
-				else: 
-					value = func(pseudo_state, parameters[time][0], parameters[time][1], parameters[time][2], parameters[time][3], parameters[time][4], parameters[time][5], parameters[time][6], parameters[time][7])
-				cost = -(self.model.initial_state['program_cost'] + self.model.initial_state['patient_cost'] * x_enroll)
-				vals.append(value + cost)
-				decs.append(x_enroll)
-			val_max = max(vals)
-			new_decision = decs[vals.index(val_max)]
-		return new_decision
+		if stop_C == True:
+			return 0
+		vals = []
+		decs = []
+		for x_enroll in range(self.model.initial_state['enroll_min'], self.model.initial_state['enroll_max']+self.model.initial_state['enroll_step'], self.model.initial_state['enroll_step']):
+			pseudo_state = [state.potential_pop + x_enroll, state.success, state.failure, state.l_response]
+			value = (
+				func_simple(
+					pseudo_state,
+					parameters[time][0],
+					parameters[time][1],
+					parameters[time][2],
+					parameters[time][3],
+				)
+				if len(parameters[time]) < 8
+				else func(
+					pseudo_state,
+					parameters[time][0],
+					parameters[time][1],
+					parameters[time][2],
+					parameters[time][3],
+					parameters[time][4],
+					parameters[time][5],
+					parameters[time][6],
+					parameters[time][7],
+				)
+			)
+			cost = -(self.model.initial_state['program_cost'] + self.model.initial_state['patient_cost'] * x_enroll)
+			vals.append(value + cost)
+			decs.append(x_enroll)
+		val_max = max(vals)
+		return decs[vals.index(val_max)]
 	
 	def run_policy(self, policy_info, policy, t):
 
@@ -166,16 +175,16 @@ class ClinicalTrialsPolicy():
 		"""
 		time_run = time.time()
 		model_copy = copy.deepcopy(self.model)
-		
+
 		while t <= model_copy.initial_state['trial_size'] and policy_info[policy][1] == False: 
 			time_t = time.time()
 			# build decision policy
 			p = self.build_policy(policy_info)
-			
+
 			# implements sampled distribution for p_true
 			p_true_samples = np.random.beta(model_copy.state.success, model_copy.state.failure, model_copy.initial_state['K'])
 			p_belief = model_copy.state.success / (model_copy.state.success + model_copy.state.failure)
-		
+
 			# drug_success = 1 if successful, 0 if failure, -1 if continue trial (for all policies)
 			if p_belief > model_copy.initial_state['theta_stop_high']:
 				decision = {'prog_continue': 0, 'drug_success': 1}
@@ -185,7 +194,7 @@ class ClinicalTrialsPolicy():
 				policy_info[policy][1] = True
 			else:
 				decision = {'prog_continue': 1, 'drug_success': -1}
-			
+
 			# makes enrollment decision based on chosen policy
 			if policy == "model_A":
 				decision['enroll'] = self.model_A_policy(model_copy.state, p.model_A)
@@ -195,7 +204,7 @@ class ClinicalTrialsPolicy():
 				decision['enroll'] = self.model_C_extension_policy(model_copy.state, p.model_C_extension)
 			elif policy == "model_C":
 				decision['enroll'] = self.model_C_policy(model_copy.state, p.model_C, t)
-			
+
 			x = model_copy.build_decision(decision)
 			print("Base Model t={}, obj={:,}, state.potential_pop={}, state.success={}, state.failure={}, x={}, elapsed time={:.2f} sec".format(t, model_copy.objective, 
 																										model_copy.state.potential_pop, 
@@ -208,8 +217,7 @@ class ClinicalTrialsPolicy():
 			# increments time
 			t += 1
 		print("Base Model: Stopping time t={}, obj(revenue)={:,}, rhobar={:.2f}, Elapsed time={:.2f} sec".format(t, model_copy.objective, model_copy.state.success/(model_copy.state.success+model_copy.state.failure),time.time()-time_run))
-		policy_value = model_copy.objective
-		return policy_value
+		return model_copy.objective
 		
 def model_A_value_fn(model, iteration, success_index,value_dict):
 	"""
@@ -291,65 +299,62 @@ def model_B_value_fn(model, iteration, success_index,value_dict):
 	:return: value of current node and its optimal enrollment count
 	"""
 	# computes value and optimal enrollments corresponding to current state
-	if success_index == -1:
-		if iteration < model.initial_state['H']:
-			bellman_vals = []
-			bellman_decisions = []
-			for x_enroll in range(model.initial_state['enroll_min'], model.initial_state['enroll_max']+model.initial_state['enroll_step'], model.initial_state['enroll_step']):
-				# "simulated" exogenous info that helps us get from (t, t') to (t, t'+1)
-				bellman_potential_pop = model.state.potential_pop + x_enroll
-				bellman_enrollments = math.floor(model.state.l_response * bellman_potential_pop)
-				bellman_cost = -(model.initial_state['program_cost'] + model.initial_state['patient_cost'] * x_enroll)
-				# loops over success values in increments of step_succ
-				step_succ = int(bellman_enrollments / 3) + 1
-				for set_succ in range(0, bellman_enrollments, step_succ):
-					bellman_state = copy.deepcopy(model.initial_state)
-					bellman_state['potential_pop'] = bellman_potential_pop
-					bellman_state['success'] =  model.state.success + set_succ
-					bellman_state['failure'] = model.state.failure + (bellman_enrollments - set_succ)
-					bellman_M = ClinicalTrialsModel(model.state_variables, model.decision_variables, bellman_state, True)
-					value_key=(iteration+1,bellman_state['potential_pop'],bellman_state['success'],bellman_state['failure'])
-					count=-1
-					
-					# implements sampled distribution for bellman_p_true
-					bellman_p_samples = np.random.beta(bellman_M.state.success, bellman_M.state.failure, bellman_M.initial_state['K'])
-					bellman_p_belief = bellman_M.state.success / (bellman_M.state.success + bellman_M.state.failure)
+	if success_index != -1:
+		return {"value": model.initial_state['success_rev'] * success_index,"optimal_enroll": 0},value_dict
+	if iteration >= model.initial_state['H']:
+		return {"value": 0,"optimal_enroll": 0},value_dict
+	bellman_vals = []
+	bellman_decisions = []
+	for x_enroll in range(model.initial_state['enroll_min'], model.initial_state['enroll_max']+model.initial_state['enroll_step'], model.initial_state['enroll_step']):
+		# "simulated" exogenous info that helps us get from (t, t') to (t, t'+1)
+		bellman_potential_pop = model.state.potential_pop + x_enroll
+		bellman_enrollments = math.floor(model.state.l_response * bellman_potential_pop)
+		bellman_cost = -(model.initial_state['program_cost'] + model.initial_state['patient_cost'] * x_enroll)
+		# loops over success values in increments of step_succ
+		step_succ = int(bellman_enrollments / 3) + 1
+		for set_succ in range(0, bellman_enrollments, step_succ):
+			bellman_state = copy.deepcopy(model.initial_state)
+			bellman_state['potential_pop'] = bellman_potential_pop
+			bellman_state['success'] =  model.state.success + set_succ
+			bellman_state['failure'] = model.state.failure + (bellman_enrollments - set_succ)
+			bellman_M = ClinicalTrialsModel(model.state_variables, model.decision_variables, bellman_state, True)
+			value_key=(iteration+1,bellman_state['potential_pop'],bellman_state['success'],bellman_state['failure'])
+			count=-1
 
-					
-					
-					if bellman_p_belief > bellman_M.initial_state['theta_stop_high']: 
-						success_index = 1
-						step_value = model.initial_state['success_rev']
-						#print("LA State: {}, ({}, {}), {} - Stopping time {}".format(bellman_state['potential_pop'],bellman_state['success'],bellman_state['failure'],model.state.l_response,iteration))
-					elif bellman_p_belief < bellman_M.initial_state['theta_stop_low']: 
-						success_index = 0
-						step_value = 0
-					else: 
-						if value_key in value_dict:
-							step_value = value_dict[value_key][0]
-							count = value_dict[value_key][1]
-							#print("key: {} value: {:.2f} count: {} lendict:{}".format(value_key,step_value,count,len(value_dict)))
-
-						else:
-							sol_dict,value_dict = model_B_value_fn(bellman_M, iteration+1, success_index,value_dict)
-							step_value = sol_dict['value']
+			# implements sampled distribution for bellman_p_true
+			bellman_p_samples = np.random.beta(bellman_M.state.success, bellman_M.state.failure, bellman_M.initial_state['K'])
+			bellman_p_belief = bellman_M.state.success / (bellman_M.state.success + bellman_M.state.failure)
 
 
-					
-					value_dict.update({value_key:[step_value,count+1]})
-					
-					for k in range(0, bellman_M.initial_state['K']):
-						bellman_cost += binom.pmf(set_succ, bellman_enrollments, bellman_p_samples[k]) * 1/bellman_M.initial_state['K'] * step_value
-				bellman_decisions.append(x_enroll)
-				bellman_vals.append(bellman_cost)
-			
-			value = max(bellman_vals)
-			optimal_enroll = bellman_decisions[bellman_vals.index(value)]
-			return {"value": value, "optimal_enroll": optimal_enroll},value_dict
-		# stops iterating at horizon t' = t + H
-		else: return {"value": 0,"optimal_enroll": 0},value_dict
-	# stops experiment at node if drug is declared success or failure
-	else: return {"value": model.initial_state['success_rev'] * success_index,"optimal_enroll": 0},value_dict
+
+			if bellman_p_belief > bellman_M.initial_state['theta_stop_high']: 
+				success_index = 1
+				step_value = model.initial_state['success_rev']
+				#print("LA State: {}, ({}, {}), {} - Stopping time {}".format(bellman_state['potential_pop'],bellman_state['success'],bellman_state['failure'],model.state.l_response,iteration))
+			elif bellman_p_belief < bellman_M.initial_state['theta_stop_low']: 
+				success_index = 0
+				step_value = 0
+			elif value_key in value_dict:
+				step_value = value_dict[value_key][0]
+				count = value_dict[value_key][1]
+				#print("key: {} value: {:.2f} count: {} lendict:{}".format(value_key,step_value,count,len(value_dict)))
+
+			else:
+				sol_dict,value_dict = model_B_value_fn(bellman_M, iteration+1, success_index,value_dict)
+				step_value = sol_dict['value']
+
+
+
+			value_dict.update({value_key:[step_value,count+1]})
+
+			for k in range(0, bellman_M.initial_state['K']):
+				bellman_cost += binom.pmf(set_succ, bellman_enrollments, bellman_p_samples[k]) * 1/bellman_M.initial_state['K'] * step_value
+		bellman_decisions.append(x_enroll)
+		bellman_vals.append(bellman_cost)
+
+	value = max(bellman_vals)
+	optimal_enroll = bellman_decisions[bellman_vals.index(value)]
+	return {"value": value, "optimal_enroll": optimal_enroll},value_dict
 
 
 
@@ -437,8 +442,12 @@ def func_simple(pseudo_state, a, b, c, d):
 	:param pseudo_state: list(float) - list of the four state variables for a given state
 	:param a, b, c, d, e: float - parameters of the linear fit function
 	"""
-	sum = a*pseudo_state[0] + b*pseudo_state[1] + c*pseudo_state[2] + d*pseudo_state[3]
-	return sum
+	return (
+		a * pseudo_state[0]
+		+ b * pseudo_state[1]
+		+ c * pseudo_state[2]
+		+ d * pseudo_state[3]
+	)
 
 def func(pseudo_state, a1, a2, b1, b2, c1, c2, d1, d2):
 	"""
@@ -461,13 +470,13 @@ def parameters_fn(model):
 	:param model: ClinicalTrialsModel - model that we simulate on (contains all state variables)
 	:return parameters: list(list(float)) - parameters for the fit functions at each t
 	"""
-	samples = [[] for n in range(model.initial_state['sampling_size'])]
-	values = [[] for n in range(model.initial_state['sampling_size'])]
+	samples = [[] for _ in range(model.initial_state['sampling_size'])]
+	values = [[] for _ in range(model.initial_state['sampling_size'])]
 	for n in range(model.initial_state['sampling_size']):
 		sample_t = 0
 		stop = False
 		sample_M = ClinicalTrialsModel(model.state_variables, model.decision_variables, model.initial_state, True)
-		while sample_t <= model.initial_state['trial_size'] and stop == False:
+		while sample_t <= model.initial_state['trial_size'] and not stop:
 			p_belief = sample_M.state.success / (sample_M.state.success + sample_M.state.failure)
 			p_true_samples = np.random.beta(sample_M.state.success, sample_M.state.failure, sample_M.initial_state['K'])
 			# drug_success = 1 if successful, 0 if failure, -1 if continue trial
@@ -479,7 +488,18 @@ def parameters_fn(model):
 				stop = True
 			else:
 				decision = {'prog_continue': 1, 'drug_success': -1}
-			decision['enroll'] = np.random.choice(range(model.initial_state['enroll_min'], model.initial_state['enroll_max']+model.initial_state['enroll_step'], model.initial_state['enroll_step'])) if stop == False else 0
+			decision['enroll'] = (
+				np.random.choice(
+					range(
+						model.initial_state['enroll_min'],
+						model.initial_state['enroll_max']
+						+ model.initial_state['enroll_step'],
+						model.initial_state['enroll_step'],
+					)
+				)
+				if not stop
+				else 0
+			)
 			x = sample_M.build_decision(decision)
 			pseudo_state = [sample_M.state.potential_pop + decision['enroll'], sample_M.state.success, sample_M.state.failure, sample_M.state.l_response]
 			sample_M.step(x)
@@ -503,11 +523,10 @@ def parameters_fn(model):
 			samples_array = uniques[:, 0:4]
 			values_array = uniques[:, 4]
 			parameters.append(np.matrix.tolist(scipy.optimize.curve_fit(func_simple, np.matrix.transpose(samples_array), values_array)[0]))
+		elif len(values_array) >= 8:
+			parameters.append(np.matrix.tolist(scipy.optimize.curve_fit(func, np.matrix.transpose(samples_array), values_array)[0]))
 		else:
-			if len(values_array) >= 8:
-				parameters.append(np.matrix.tolist(scipy.optimize.curve_fit(func, np.matrix.transpose(samples_array), values_array)[0]))
-			else:
-				parameters.append(np.matrix.tolist(scipy.optimize.curve_fit(func_simple, np.matrix.transpose(samples_array), values_array)[0]))
+			parameters.append(np.matrix.tolist(scipy.optimize.curve_fit(func_simple, np.matrix.transpose(samples_array), values_array)[0]))
 	return parameters
 
 if __name__ == "__main__":
@@ -549,8 +568,6 @@ if __name__ == "__main__":
 					'model_B': [-1, stop],
 					'model_C': [-1, stop],
 					'model_C_extension': [-1, stop]}
-					
+
 	# an example of running the Model B policy
 	P.run_policy(policy_info, "model_B", t)
-	
-	pass

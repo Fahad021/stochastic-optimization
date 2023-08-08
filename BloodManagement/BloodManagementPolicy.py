@@ -77,76 +77,60 @@ class Policy():
         b = np.array(M.Bld_Net.bloodamount)
         self.h[:params['NUM_DEM_NODES']] = M.Bld_Net.demandamount
 
-        
+
         c = cvxopt.matrix(c)
         b = cvxopt.matrix(b,size=(params['NUM_BLD_NODES'],1),tc='d')
         h = cvxopt.matrix(self.h)
-        
+
         cvxopt.solvers.options['show_progress'] = False
-        sol = cvxopt.solvers.lp(c, self.G, h, self.A, b,solver='glpk',options={'glpk':{'msg_lev':'GLP_MSG_OFF'}}) 
+        sol = cvxopt.solvers.lp(c, self.G, h, self.A, b,solver='glpk',options={'glpk':{'msg_lev':'GLP_MSG_OFF'}})
         #sol = cvxopt.solvers.lp(c, self.G, h, self.A, b) 
 
         x = sol['x']
-           
+
         x = np.array(x)
         x = np.squeeze(x)
-        
+
         val = np.dot(x, self.coeff)
-        
-        
-        
+
+
+
         xDem = [x[i*(params['NUM_DEM_NODES']+params['NUM_PARALLEL_LINKS']):i*(params['NUM_DEM_NODES']+params['NUM_PARALLEL_LINKS'])+params['NUM_DEM_NODES']] for i in list(range(params['NUM_BLD_NODES']))]
         xDemFlat = [xij for xi in xDem for xij in xi]
         solDemRec=(iteration,t,xDem.copy())
         solDemList.append(solDemRec)
-        
+
         hld=[np.sum(x[i*(params['NUM_DEM_NODES']+params['NUM_PARALLEL_LINKS'])+params['NUM_DEM_NODES']:(i+1)*(params['NUM_DEM_NODES']+params['NUM_PARALLEL_LINKS'])]) for i in list(range(params['NUM_BLD_NODES']))]
         solHoldRecord = (iteration,t,hld.copy())
         solHoldList.append(solHoldRecord)
         hld = np.array(hld)
-        
+
         invByBlood = [np.sum(M.bld_inv[i*params['MAX_AGE']:(i+1)*params['MAX_AGE']]) for i in list(range(len(params['Bloodtypes']))) ]
         demByBlood = [np.sum(M.Bld_Net.demandamount[i*(len(params['Surgerytypes'])*len(params['Substitution'])):(i+1)*(len(params['Surgerytypes'])*len(params['Substitution']))]) for i in list(range(len(params['Bloodtypes']))) ]
-        
+
         xDemFlat = [xij for xi in xDem for xij in xi]
         xDemMat = np.array(xDemFlat).reshape(params['NUM_BLD_NODES'],params['NUM_DEM_NODES'])
-        xDemMatColSum =  xDemMat.sum(axis=0)   
+        xDemMatColSum =  xDemMat.sum(axis=0)
         covByBlood = [ np.sum(xDemMatColSum[i*(len(params['Surgerytypes'])*len(params['Substitution'])):(i+1)*(len(params['Surgerytypes'])*len(params['Substitution']))]) for i in list(range(len(params['Bloodtypes']))) ]
         covByBlood = np.array(covByBlood).astype(int)
-        
+
         hldByBlood = [int(np.sum(hld[i*params['MAX_AGE']:(i+1)*params['MAX_AGE']])) for i in list(range(len(params['Bloodtypes']))) ]
         disByBlood = hld[params['MAX_AGE']-1::params['MAX_AGE']]
         disByBlood = np.array(disByBlood)
         disByBlood = disByBlood.astype(int)
-        
-        if False:
-            print('Iteration = ', iteration)
-            print('Time period = ', t)
-            print('Demand = ', np.sum(M.Bld_Net.demandamount))
-            print('Supply = ', np.sum(M.Bld_Net.bloodamount))
-            print('Blood Used = ', np.sum(M.bld_inv) - np.sum(hld))
-            print('Blood Held = ', np.sum(hld))
-            print('Inventory by BloodType ',invByBlood)
-            print('Demand By BloodType ',demByBlood)
-            print('Used By BloodType ', list(covByBlood))
-            print('Hold By BloodType ',hldByBlood)
-            print('Discard By BloodType ', list(disByBlood))
-            print('Contribution = ', val)   
-            print('Donation = ', np.sum(M.donation)) 
-            print('\n')
-        
+
         hld = hld.astype(int)
-        
+
         if IS_TRAINING and params['IS_PERTUB']:
             epsilon = PERTUB_GEN.poisson(LAMBDA_PERTUB, params['NUM_BLD_NODES']) 
             signE = PERTUB_GEN.choice([-1,1], size=params['NUM_BLD_NODES'], replace=True, p=None)
             hld = hld+epsilon*signE
             hld = np.maximum(np.zeros(params['NUM_BLD_NODES']),hld)
             hld = hld.astype(int)
-    
+
         # dual variables
         d = sol['y']
-               
+
         return sol,val,x,hld,d,solDemList,solHoldList
     
     def updateVFAs(self,params,M,iteration,t,d, slopesList,updateVfaList):

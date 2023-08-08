@@ -62,12 +62,12 @@ def loadParams(filename):
 
 
     #Set here bloodtypes and substitutions that are allowed
-    params['Bloodtypes'] = ['AB+', 'AB-', 'A+', 'A-','B+', 'B-', 'O+', 'O-'] 
+    params['Bloodtypes'] = ['AB+', 'AB-', 'A+', 'A-','B+', 'B-', 'O+', 'O-']
     params['NUM_BLD_TYPES'] = len(params['Bloodtypes'])
 
     b = [(x,y) for x in params['Bloodtypes'] for y in params['Bloodtypes']]
-    f = [False]*(len(params['Bloodtypes'])*len(params['Bloodtypes']))
-    c = {k:v for k,v in zip(b, f)}
+    f = [False] * len(params['Bloodtypes'])**2
+    c = dict(zip(b, f))
     #In case we want to allow subs
     c[('AB+', 'AB+')] = True
 
@@ -129,7 +129,7 @@ def loadParams(filename):
     params['NUM_TRAINNING_ITER'] = int(params['NUM_TRAINNING_ITER'])
     params['NUM_TESTING_ITER']=int(params['NUM_TESTING_ITER'])
     params['NUM_ITER'] = int(params['NUM_TESTING_ITER'] + params['NUM_TRAINNING_ITER']) #Total number of iterations
-    params['MAX_TIME']=int(15)
+    params['MAX_TIME'] = 15
     params['Times'] = list(range(params['MAX_TIME']))
 
     # Set here VFA parameters
@@ -175,8 +175,8 @@ def loadParams(filename):
     # params['AGE_BONUS']=list(reversed(list(range(0,MAX_AGE))))
     # params['AGE_BONUS']=list(range(0,MAX_AGE))
     # params['AGE_BONUS']=[0.5, 2] #It has to be the same length as MAX_AGE
-    
-    
+
+
     params['INFEASIABLE_SUBSTITUTION_PENALTY'] = -50
     params['NO_SUBSTITUTION_BONUS'] = 5
     params['URGENT_DEMAND_BONUS'] = 30
@@ -195,8 +195,8 @@ def loadParams(filename):
     # Set here max demand by blood type (when 'U'niform dist) or mean demand (when 'P'oisson dist) 
     params['DEFAULT_VALUE_DIST'] = 20
     d = [params['DEFAULT_VALUE_DIST']] * params['NUM_BLD_TYPES']
-    params['MAX_DEM_BY_BLOOD'] = {k:v for k,v in zip(params['Bloodtypes'], d)}
-    params['MAX_DON_BY_BLOOD'] = {k:v for k,v in zip(params['Bloodtypes'], d)}
+    params['MAX_DEM_BY_BLOOD'] = dict(zip(params['Bloodtypes'], d))
+    params['MAX_DON_BY_BLOOD'] = dict(zip(params['Bloodtypes'], d))
 
 
     # Set here demand by blood type (for blood types that are different than the params['DEFAULT_VALUE_DIST'])
@@ -268,11 +268,11 @@ def loadParams(filename):
 
     #Set here random surge parameters
     #params['TIME_PERIODS_SURGE'] = set([4,8,10,12,14])
-    params['TIME_PERIODS_SURGE'] = set([3,6,10,13])
+    params['TIME_PERIODS_SURGE'] = {3, 6, 10, 13}
     #SURGE_PROB = 0.7
     params['SURGE_FACTOR'] = 6 #The surge demand is always going to be poisson with mean SURGE_FACTOR*params['MAX_DEM_BY_BLOOD'], even if the regular demand distribution is Uniform
 
-    
+
     #Set here the weights for the utility function - urgent coverage, elective coverage, proportion of blood discarded
     params['WEIGHT_URGENT']=10
     params['WEIGHT_ELECTIVE']=1
@@ -283,17 +283,16 @@ def loadParams(filename):
     if (params['SAMPLING_DIST'] == 'P'):
         params['MAX_DEM_BY_BLOOD'] = {k: int(v * params['POISSON_FACTOR']) for k, v in params['MAX_DEM_BY_BLOOD'].items()}
         params['MAX_DON_BY_BLOOD'] = {k: int(v * params['POISSON_FACTOR']) for k, v in params['MAX_DON_BY_BLOOD'].items()}
-        
+
         params['AVG_TOTAL_DEMAND'] = sum(params['MAX_DEM_BY_BLOOD'].values())
         params['AVG_TOTAL_SUPPLY'] = sum(params['MAX_DON_BY_BLOOD'].values())
-        params['NUM_PARALLEL_LINKS'] = int(params['MAX_AGE']/2 * max(params['MAX_DON_BY_BLOOD'].values()))
-        #print("Exogenous info dist: Poisson ")
+            #print("Exogenous info dist: Poisson ")
     else:
         params['AVG_TOTAL_DEMAND'] = sum(params['MAX_DEM_BY_BLOOD'].values())/2
         params['AVG_TOTAL_SUPPLY'] = sum(params['MAX_DON_BY_BLOOD'].values())/2
-        params['NUM_PARALLEL_LINKS'] = int(params['MAX_AGE']/2 * max(params['MAX_DON_BY_BLOOD'].values()))
-        #print("Exogenous info dist: Uniform")
+            #print("Exogenous info dist: Uniform")
 
+    params['NUM_PARALLEL_LINKS'] = int(params['MAX_AGE']/2 * max(params['MAX_DON_BY_BLOOD'].values()))
     #Checking if MYOPIC policy
     if not params['USE_VFA']:
         params['ALPHA'] = 0
@@ -312,7 +311,7 @@ def loadParams(filename):
          print("Exogenous info dist: Poisson ")
     else:
         print("Exogenous info dist: Uniform")
-    
+
     print("Demand parameters by blood type ",params['MAX_DEM_BY_BLOOD'])
     print("There are ",params['NUM_SUR_TYPES'] * len(params['Substitution'])," demand nodes for each blood type")
     print("Weights SURGERYTYPES_PROP ",params['SURGERYTYPES_PROP'])
@@ -327,8 +326,8 @@ def loadParams(filename):
 
     print("Possible surge time periods ", params['TIME_PERIODS_SURGE'])
     print("SURGE_PROB ", params['SURGE_PROB'], " and SURGE_FACTOR ", params['SURGE_FACTOR'])
-        
-        
+
+
     return params 
 
 
@@ -341,16 +340,16 @@ def initOutputListHeaders(params):
     labelsSupplyPre=['Iteration','Time','BloodType','Age','PreInv']
     labelsSupplyPost=['Iteration','Time','BloodType','Age','PostInv']
 
-    
+
     labelsSlopesList=['Iteration','Time','BloodType','Age']
-    vNames = ["v_"+str(r) for r in list(range(params['NUM_PARALLEL_LINKS']))]
-    labelsSlopesList = labelsSlopesList + vNames
-   
-    headerSolDemList =['Iteration',  'Time','BloodTypeS', 'Age','BloodTypeD', 'Urgency', 'SubsAllowed', 'isCompatible',  'Contrib', 'Value']    
-    headerSolHoldList = ['Iteration','Time','BloodTypeS','Age','Value']  
-    headerSimuList = ['Iteration','ElapsedTime','Stepsize','ObjVal','isTrainning']  
+    vNames = [f"v_{str(r)}" for r in list(range(params['NUM_PARALLEL_LINKS']))]
+    labelsSlopesList += vNames
+
+    headerSolDemList =['Iteration',  'Time','BloodTypeS', 'Age','BloodTypeD', 'Urgency', 'SubsAllowed', 'isCompatible',  'Contrib', 'Value']
+    headerSolHoldList = ['Iteration','Time','BloodTypeS','Age','Value']
+    headerSimuList = ['Iteration','ElapsedTime','Stepsize','ObjVal','isTrainning']
     headerUpdateVfaList = ['Iteration','Time','BloodType','Age','R','vhat','vbarOld','sqGrad','stepsize','vbarNew']
-    
+
     return(labelsDemandExo, labelsDonationExo,labelsSupplyPre,labelsSupplyPost,labelsSlopesList,headerSolDemList,headerSolHoldList,headerSimuList,headerUpdateVfaList)
 
 

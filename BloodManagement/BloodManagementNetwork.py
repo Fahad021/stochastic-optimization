@@ -6,29 +6,29 @@ from BloodManagementModel import contribution
 
 class Graph:
     def __init__(self):
-        self.bloodnodes = list()
+        self.bloodnodes = []
         self.bloodamount = []
-        
-        self.demandnodes = list()
+
+        self.demandnodes = []
         self.demandamount = []
         self.demcontrib = {}
-        
+
         self.demedges = defaultdict(list)
         self.demweights = {}
-        
-        
-        
+
+
+
         self.supersink = None
-        
-        self.holdnodes = list()
+
+        self.holdnodes = []
         self.holdamount = []
         self.holdedges = defaultdict(list)
         self.holdweights = {}
         self.holdvbar = []
-        
+
         self.parallelarr = {}
         self.varr = {}
-        
+
         self.sqGrad = {} #this will store the sum of the squared gradients when using AdaGrad stepsizes.
         
     

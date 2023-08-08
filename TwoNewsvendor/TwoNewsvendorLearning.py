@@ -102,17 +102,19 @@ class Choice:
 
 	# the cost function approximation for this choice of bias
 	def get_UCB_value(self, time):
-		if self.n == 0:
-			UCB_val =  np.inf
-
-		else:
-			UCB_val = (self.util_estimate + self.theta * math.sqrt(math.log(time) / self.n))
-		return UCB_val
+		return (
+			np.inf
+			if self.n == 0
+			else (
+				self.util_estimate + self.theta * math.sqrt(math.log(time) / self.n)
+			)
+		)
 
 	def get_IE_value(self):
 		
-		IE_val = (self.util_estimate + self.theta * math.sqrt(1/self.accumulated_precision))
-		return IE_val
+		return self.util_estimate + self.theta * math.sqrt(
+			1 / self.accumulated_precision
+		)
 	
 	def get_nb_experiments(self):
 		return self.n
@@ -135,10 +137,9 @@ class Choice:
 	def printChoiceParameters(self,n):
 		valuesList = self.getAllParametersList(n)
 		headerList = self.getAllParametersHeaderList()
-		outStr=""
-		for i in range(len(valuesList)):
-			outStr += "{}: {}, ".format(headerList[i],valuesList[i])
-		return outStr
+		return "".join(
+			f"{headerList[i]}: {valuesList[i]}, " for i in range(len(valuesList))
+		)
 
 # the model for the field agent treating the problem as a 
 # learning problem 
@@ -180,13 +181,15 @@ class Learning_model_field(Model_Field):
 
 	def getMainParametersList(self):
 		listPar = [self.choices[x].getMainParametersList() for x in self.choice_range]
-		listParFlat = [elem for l in listPar for elem in l]
-		return listParFlat
+		return [elem for l in listPar for elem in l]
 
 	def getMainParametersHeaderList(self):
 		listPar = [self.choices[x].getMainParametersHeaderList() for x in self.choice_range]
-		listParFlat = [str(x)+"_field_"+elem for x,l in zip(self.choice_range,listPar) for elem in l]
-		return listParFlat
+		return [
+			f"{str(x)}_field_" + elem
+			for x, l in zip(self.choice_range, listPar)
+			for elem in l
+		]
 
 	def getMainParametersDf(self):
 		dictPar = {x:self.choices[x].getMainParametersList() for x in self.choice_range}
@@ -236,13 +239,15 @@ class Learning_model_central(Model_Central):
 
 	def getMainParametersList(self):
 		listPar = [self.choices[x].getMainParametersList() for x in self.choice_range]
-		listParFlat = [elem for l in listPar for elem in l]
-		return listParFlat
+		return [elem for l in listPar for elem in l]
 
 	def getMainParametersHeaderList(self):
 		listPar = [self.choices[x].getMainParametersHeaderList() for x in self.choice_range]
-		listParFlat = [str(x)+"_central_"+elem for x,l in zip(self.choice_range,listPar) for elem in l]
-		return listParFlat
+		return [
+			f"{str(x)}_central_" + elem
+			for x, l in zip(self.choice_range, listPar)
+			for elem in l
+		]
 
 	def getMainParametersDf(self):
 		dictPar = {x:self.choices[x].getMainParametersList() for x in self.choice_range}
